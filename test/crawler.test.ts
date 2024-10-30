@@ -1,6 +1,8 @@
-import { WebCrawler, CrawlerOptions } from './crawler';
+import { describe, test } from 'mocha'
+import { expect } from 'chai';
+import { Crawler, CrawlerOptions } from '../src/crawler.js';
 
-describe('WebCrawler', () => {
+describe('Crawler', () => {
     let defaultOptions: CrawlerOptions;
 
     beforeEach(() => {
@@ -18,8 +20,8 @@ describe('WebCrawler', () => {
     });
 
     test('creates crawler with default options', () => {
-        const crawler = new WebCrawler(defaultOptions);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(defaultOptions);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('handles proxy configuration', () => {
@@ -27,8 +29,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             proxy: 'http://proxy.example.com:8080'
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('handles user agent configuration', () => {
@@ -36,8 +38,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             userAgent: 'Custom User Agent 1.0'
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('enables verbose logging', () => {
@@ -45,8 +47,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             verbose: true
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates maxDepth option', () => {
@@ -54,8 +56,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             maxDepth: 0
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates maxPages option', () => {
@@ -63,8 +65,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             maxPages: 1
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates concurrency option', () => {
@@ -72,8 +74,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             concurrency: 5
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates waitUntil option', () => {
@@ -81,8 +83,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             waitUntil: 'load' as const
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates followExternal option', () => {
@@ -90,8 +92,8 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             followExternal: true
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 
     test('validates headless option', () => {
@@ -99,7 +101,7 @@ describe('WebCrawler', () => {
             ...defaultOptions,
             headless: false
         };
-        const crawler = new WebCrawler(options);
-        expect(crawler).toBeInstanceOf(WebCrawler);
+        const crawler = new Crawler(options);
+        expect(crawler).to.be.instanceOf(Crawler);
     });
 });
