@@ -16,95 +16,121 @@ export interface CrawlerOptions {
     verbose?: boolean;
 }
 
-export function isExternalUrl(baseUrl: string, urlToCheck: string) {
-    const baseHostname = new URL(baseUrl).hostname;
-    const urlHostname = new URL(urlToCheck).hostname;
-    return baseHostname !== urlHostname;
-}
+export class WebCrawler {
+    private options: CrawlerOptions;
+    private crawler: PlaywrightCrawler;
 
-export async function runCrawler(options: CrawlerOptions) {
-    if (options.verbose) {
-        log.setLevel(log.LEVELS.DEBUG);
+    constructor(options: CrawlerOptions) {
+        this.options = options;
+        if (options.verbose) {
+            log.setLevel(log.LEVELS.DEBUG);
+        }
+        
+        this.crawler = new PlaywrightCrawler(this.getCrawlerConfig());
     }
 
-    const crawlerConfig = {
-        headless: options.headless,
-        maxConcurrency: options.concurrency, // TODO implement
-        navigationTimeoutSecs: options.timeout,
-        requestHandlerTimeoutSecs: options.timeout * 2,
+    private isExternalUrl(urlToCheck: string): boolean {
+        const baseHostname = new URL(this.options.startUrl).hostname;
+        const urlHostname = new URL(urlToCheck).hostname;
+        return baseHostname !== urlHostname;
+    }
 
-        ...(options.proxy && {
-            proxyUrl: options.proxy
-        }),
+    private getCrawlerConfig() {
+        return {
+            headless: this.options.headless,
+            maxConcurrency: this.options.concurrency,
+            navigationTimeoutSecs: this.options.timeout,
+            requestHandlerTimeoutSecs: this.options.timeout * 2,
+            
+            ...(this.options.proxy && {
+                proxyUrl: this.options.proxy
+            }),
 
-        browserPoolOptions: {
-            useFingerprints: true,
-            ...(options.userAgent && {
-                defaultUserAgent: options.userAgent
-            })
-        },
+            browserPoolOptions: {
+                useFingerprints: true,
+                ...(this.options.userAgent && {
+                    defaultUserAgent: this.options.userAgent
+                })
+            },
 
-        async requestHandler({ request, page, enqueueLinks, log }: { request: Request, page: Page, enqueueLinks: (options?: EnqueueLinksOptions) => Promise<unknown>, log: Log }) {
-            const { url, userData: { depth = 0 } } = request;
-            log.info(`Crawling ${url} (depth: ${depth})`);
+            requestHandler: this.handleRequest.bind(this),
+            failedRequestHandler: this.handleFailedRequest.bind(this),
+            maxRequestsPerCrawl: this.options.maxPages,
+        };
+    }
 
-            try {
-                await page.waitForLoadState(options.waitUntil);
+    private async handleRequest({ request, page, enqueueLinks, log }: { 
+        request: Request, 
+        page: Page, 
+        enqueueLinks: (options?: EnqueueLinksOptions) => Promise<unknown>, 
+        log: Log 
+    }) {
+        const { url, userData: { depth = 0 } } = request;
+        log.info(`Crawling ${url} (depth: ${depth})`);
 
-                const title = await page.title();
-                const metadata = await page.evaluate(() => {
-                    const metaTags: { [key: string]: string } = {};
-                    document.querySelectorAll('meta').forEach(meta => {
-                        const name = meta.getAttribute('name') || meta.getAttribute('property');
-                        const content = meta.getAttribute('content');
-                        if (name && content) {
-                            metaTags[name] = content;
-                        }
-                    });
-                    return metaTags;
-                });
+        try {
+            await page.waitForLoadState(this.options.waitUntil);
 
-                await Dataset.pushData({
-                    url,
-                    title,
-                    depth,
-                    metadata,
-                    timestamp: new Date().toISOString()
-                });
+            const title = await page.title();
+            const metadata = await this.extractMetadata(page);
 
-                if (depth >= options.maxDepth) {
-                    log.debug(`Reached max depth at ${url}`);
-                    return;
-                }
+            await Dataset.pushData({
+                url,
+                title,
+                depth,
+                metadata,
+                timestamp: new Date().toISOString()
+            });
 
-                await enqueueLinks({
-                    strategy: 'same-domain',
-                    transformRequestFunction: (req) => {
-                        if (!options.followExternal && isExternalUrl(options.startUrl, req.url)) {
-                            return false;
-                        }
-                        (req as any).userData = { depth: depth + 1 };
-                        return req;
-                    }
-                });
-
-            } catch (error: any) {
-                log.error(`Failed to crawl ${url}: ${error.message}`);
+            if (depth >= this.options.maxDepth) {
+                log.debug(`Reached max depth at ${url}`);
+                return;
             }
-        },
 
-        failedRequestHandler({ request, log }: { request: Request, log: Log }) {
-            log.error(`Request ${request.url} failed`);
-        },
+            await this.enqueueNextLinks(enqueueLinks, depth);
 
-        maxRequestsPerCrawl: options.maxPages,
-    };
+        } catch (error: any) {
+            log.error(`Failed to crawl ${url}: ${error.message}`);
+        }
+    }
 
-    const crawler = new PlaywrightCrawler(crawlerConfig);
-    await crawler.run([options.startUrl]);
-    
-    return {
-        success: true,
-        outputPath: options.output
-    };
+    private async extractMetadata(page: Page) {
+        return page.evaluate(() => {
+            const metaTags: { [key: string]: string } = {};
+            document.querySelectorAll('meta').forEach(meta => {
+                const name = meta.getAttribute('name') || meta.getAttribute('property');
+                const content = meta.getAttribute('content');
+                if (name && content) {
+                    metaTags[name] = content;
+                }
+            });
+            return metaTags;
+        });
+    }
+
+    private async enqueueNextLinks(enqueueLinks: (options?: EnqueueLinksOptions) => Promise<unknown>, currentDepth: number) {
+        await enqueueLinks({
+            strategy: 'same-domain',
+            transformRequestFunction: (req) => {
+                if (!this.options.followExternal && this.isExternalUrl(req.url)) {
+                    return false;
+                }
+                (req as any).userData = { depth: currentDepth + 1 };
+                return req;
+            }
+        });
+    }
+
+    private handleFailedRequest({ request, log }: { request: Request, log: Log }) {
+        log.error(`Request ${request.url} failed`);
+    }
+
+    public async run() {
+        await this.crawler.run([this.options.startUrl]);
+        
+        return {
+            success: true,
+            outputPath: this.options.output
+        };
+    }
 }
