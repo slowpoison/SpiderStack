@@ -16,7 +16,7 @@ export interface CrawlerOptions {
     verbose?: boolean;
 }
 
-export class WebCrawler {
+export class Crawler {
     private options: CrawlerOptions;
     private crawler: PlaywrightCrawler;
 
