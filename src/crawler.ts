@@ -1,51 +1,66 @@
-import { Dataset, EnqueueLinksOptions, log, Log, PlaywrightCrawler, Request } from 'crawlee';
+import { Configuration, Dataset, EnqueueLinksOptions, log, Log, PlaywrightCrawler, PlaywrightCrawlerOptions, Request } from 'crawlee';
+import os from 'os';
 import { Page } from 'playwright';
 
 export interface CrawlerOptions {
-    startUrl: string;
     maxDepth: number;
     maxPages: number;
-    concurrency: number;
-    timeout: number;
+    maxConcurrency: number;
+    timeoutSecs: number;
     waitUntil: 'domcontentloaded' | 'load' | 'networkidle';
-    output: string;
-    followExternal: boolean;
+    outDir: string;
     headless: boolean;
-    proxy?: string;
     userAgent?: string;
     verbose?: boolean;
 }
 
 export class Crawler {
+    static defaultOptions: CrawlerOptions = {
+        maxDepth: 2,
+        maxPages: 10,
+        maxConcurrency: os.cpus().length,
+        timeoutSecs: 30,
+        waitUntil: 'domcontentloaded',
+        outDir: './storage',
+        headless: true
+    }
+
+    private crawledUrls: Set<string> = new Set();
+    private url: string;
     private options: CrawlerOptions;
     private crawler: PlaywrightCrawler;
 
-    constructor(options: CrawlerOptions) {
-        this.options = options;
-        if (options.verbose) {
+    constructor(url: string, options?: Partial<CrawlerOptions>) {
+        this.options = {
+            ...Crawler.defaultOptions,
+            ...options
+        };
+
+        if (this.options.verbose) {
             log.setLevel(log.LEVELS.DEBUG);
         }
         
-        this.crawler = new PlaywrightCrawler(this.getCrawlerConfig());
+        this.crawler = new PlaywrightCrawler(this.playwrightOptions(), this.playwrightConfig());
+        this.url = url;
+    }
+
+    public getCrawledUrls() {
+        return this.crawledUrls;
     }
 
     private isExternalUrl(urlToCheck: string): boolean {
-        const baseHostname = new URL(this.options.startUrl).hostname;
+        const baseHostname = new URL(this.url).hostname;
         const urlHostname = new URL(urlToCheck).hostname;
         return baseHostname !== urlHostname;
     }
 
-    private getCrawlerConfig() {
+    private playwrightOptions(): PlaywrightCrawlerOptions {
         return {
             headless: this.options.headless,
-            maxConcurrency: this.options.concurrency,
-            navigationTimeoutSecs: this.options.timeout,
-            requestHandlerTimeoutSecs: this.options.timeout * 2,
+            maxConcurrency: this.options.maxConcurrency,
+            navigationTimeoutSecs: this.options.timeoutSecs,
+            requestHandlerTimeoutSecs: this.options.timeoutSecs! * 2,
             
-            ...(this.options.proxy && {
-                proxyUrl: this.options.proxy
-            }),
-
             browserPoolOptions: {
                 useFingerprints: true,
                 ...(this.options.userAgent && {
@@ -59,6 +74,13 @@ export class Crawler {
         };
     }
 
+    private playwrightConfig(): Configuration {
+        return new Configuration({
+                purgeOnStart: false,
+                persistStorage: true,
+            });
+    }
+
     private async handleRequest({ request, page, enqueueLinks, log }: { 
         request: Request, 
         page: Page, 
@@ -67,11 +89,13 @@ export class Crawler {
     }) {
         const { url, userData: { depth = 0 } } = request;
         log.info(`Crawling ${url} (depth: ${depth})`);
+        this.crawledUrls.add(url);
 
         try {
             await page.waitForLoadState(this.options.waitUntil);
 
             const title = await page.title();
+            console.log(`Title: ${title}`);
             const metadata = await this.extractMetadata(page);
 
             await Dataset.pushData({
@@ -112,9 +136,7 @@ export class Crawler {
         await enqueueLinks({
             strategy: 'same-domain',
             transformRequestFunction: (req) => {
-                if (!this.options.followExternal && this.isExternalUrl(req.url)) {
-                    return false;
-                }
+                console.log('transformRequestFunction', req.url);
                 (req as any).userData = { depth: currentDepth + 1 };
                 return req;
             }
@@ -126,11 +148,11 @@ export class Crawler {
     }
 
     public async run() {
-        await this.crawler.run([this.options.startUrl]);
+        await this.crawler.run([this.url]);
         
         return {
             success: true,
-            outputPath: this.options.output
+            outputPath: this.options.outDir
         };
     }
 }

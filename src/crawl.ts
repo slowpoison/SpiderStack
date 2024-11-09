@@ -1,5 +1,4 @@
 import { program } from 'commander';
-import { log } from 'crawlee';
 import { Crawler, CrawlerOptions } from './crawler.js';
 
 // Configure CLI options
@@ -25,16 +24,13 @@ const startUrl = program.args[0];
 
 // Create crawler options from CLI arguments
 const crawlerOptions: CrawlerOptions = {
-    startUrl,
     maxDepth: parseInt(cliOptions.maxDepth),
     maxPages: parseInt(cliOptions.maxPages),
-    concurrency: parseInt(cliOptions.concurrency),
-    timeout: parseInt(cliOptions.timeout),
+    maxConcurrency: parseInt(cliOptions.concurrency),
+    timeoutSecs: parseInt(cliOptions.timeout),
     waitUntil: cliOptions.waitUntil as 'domcontentloaded' | 'load' | 'networkidle',
-    output: cliOptions.output,
-    followExternal: cliOptions.followExternal,
+    outDir: cliOptions.output,
     headless: cliOptions.headless,
-    proxy: cliOptions.proxy,
     userAgent: cliOptions.userAgent,
     verbose: cliOptions.verbose
 };
@@ -44,14 +40,13 @@ console.log(`Starting crawler with following configuration:
 - Start URL: ${startUrl}
 - Max depth: ${crawlerOptions.maxDepth}
 - Max pages: ${crawlerOptions.maxPages}
-- Concurrency: ${crawlerOptions.concurrency}
-- Output: ${crawlerOptions.output}
-- Follow external: ${crawlerOptions.followExternal}
+- Concurrency: ${crawlerOptions.maxConcurrency}
+- Output: ${crawlerOptions.outDir}
 `);
 
 // Run the crawler
 try {
-    const crawler = new Crawler(crawlerOptions);
+    const crawler = new Crawler(startUrl, crawlerOptions);
     const result = await crawler.run();
     
     console.log('Crawling finished successfully!');
