@@ -7,6 +7,7 @@
   "bin": "crawl.js",
   "scripts": {
     "devBuild": "tsc --watch --outDir build",
+    "devServe": "pnpx serve test/public",
     "test": "rsync -a test/public build/test/ && mocha build/test"
   },
   "keywords": [],
