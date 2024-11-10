@@ -94,13 +94,14 @@ describe('Crawler', () => {
         ]));
     });
 
-    test('validates maxPages option', () => {
+    test('validates maxPages option', async () => {
         const options = {
             ...defaultOptions,
-            maxPages: 1
+            maxPages: 2
         };
         const crawler = new Crawler(baseUrl, options);
-        expect(crawler).to.be.instanceOf(Crawler);
+        await crawler.run();
+        expect(crawler.getCrawledUrls().size).to.equal(2);
     });
 
     test('validates concurrency option', () => {

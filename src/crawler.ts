@@ -95,7 +95,7 @@ export class Crawler {
             await page.waitForLoadState(this.options.waitUntil);
 
             const title = await page.title();
-            console.log(`Title: ${title}`);
+            log.debug(`Title: ${title}`);
             const metadata = await this.extractMetadata(page);
 
             await Dataset.pushData({
