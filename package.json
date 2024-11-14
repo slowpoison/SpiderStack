@@ -8,7 +8,8 @@
   "scripts": {
     "devBuild": "tsc --watch --outDir build",
     "devServe": "pnpx serve test/public",
-    "test": "rsync -a test/public build/test/ && mocha build/test"
+    "test": "rsync -a test/public build/test/ && mocha build/test",
+    "crawl": "node build/src/crawl.js"
   },
   "keywords": [],
   "author": "",

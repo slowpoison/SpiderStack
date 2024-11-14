@@ -16,14 +16,13 @@ export interface CrawlerOptions {
 
 export class Crawler {
     static defaultOptions: CrawlerOptions = {
-        maxDepth: 2,
-        maxPages: 10,
-        maxConcurrency: os.cpus().length,
+        maxDepth: 3,
+        maxPages: 100,
+        maxConcurrency: 10,
         timeoutSecs: 30,
         waitUntil: 'domcontentloaded',
-        outDir: './storage',
-        headless: true
-    }
+        outDir: 'crawler-results',
+        headless: true    }
 
     private crawledUrls: Set<string> = new Set();
     private url: string;

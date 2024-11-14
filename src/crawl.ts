@@ -12,10 +12,7 @@ program
     .option('-t, --timeout <number>', 'Navigation timeout in seconds', '30')
     .option('-w, --wait-until <event>', 'When to consider navigation finished: domcontentloaded, load, networkidle', 'domcontentloaded')
     .option('-o, --output <path>', 'Output dataset name', 'crawler-results')
-    .option('--follow-external', 'Follow links to external domains', false)
     .option('--headless', 'Run browser in headless mode', true)
-    .option('--proxy <url>', 'Proxy URL to use')
-    .option('--user-agent <string>', 'Custom user agent string')
     .option('-v, --verbose', 'Enable verbose logging')
     .parse();
 
